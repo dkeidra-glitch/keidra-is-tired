@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fire — p5.js</title>
+  <style>
+    body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"></script>
+<script>
+const W = 400, H = 500;
+let particles = [];
+
+class Particle {
+  constructor(x, y) {
+    this.pos = createVector(x + random(-18, 18), y);
+    this.vel = createVector(random(-0.6, 0.6), random(-3.5, -1.5));
+    this.acc = createVector(0, 0);
+    this.lifespan = 255;
+    this.decay = random(4, 9);
+    this.size = random(14, 32);
+  }
+
+  update() {
+    this.vel.add(createVector(random(-0.15, 0.15), 0)); // flicker drift
+    this.pos.add(this.vel);
+    this.lifespan -= this.decay;
+    this.size *= 0.97;
+  }
+
+  draw() {
+    let t = 1 - this.lifespan / 255; // 0 = born, 1 = dead
+
+    // Color: white-yellow → orange → red → transparent
+    let r, g, b;
+    if (t < 0.3) {
+      // white-yellow core
+      r = 255;
+      g = map(t, 0, 0.3, 255, 200);
+      b = map(t, 0, 0.3, 220, 0);
+    } else if (t < 0.6) {
+      r = 255;
+      g = map(t, 0.3, 0.6, 200, 80);
+      b = 0;
+    } else {
+      r = map(t, 0.6, 1.0, 255, 80);
+      g = map(t, 0.6, 1.0, 80, 0);
+      b = 0;
+    }
+
+    noStroke();
+    fill(r, g, b, this.lifespan * 0.85);
+    ellipse(this.pos.x, this.pos.y, this.size * (1 - t * 0.4), this.size);
+  }
+
+  isDead() {
+    return this.lifespan <= 0 || this.size < 1;
+  }
+}
+
+class Ember {
+  constructor(x, y) {
+    this.pos = createVector(x + random(-20, 20), y);
+    this.vel = createVector(random(-1.2, 1.2), random(-5, -2));
+    this.lifespan = 255;
+    this.size = random(2, 4);
+  }
+
+  update() {
+    this.vel.y += 0.05; // slight gravity
+    this.vel.x += random(-0.1, 0.1);
+    this.pos.add(this.vel);
+    this.lifespan -= random(3, 6);
+  }
+
+  draw() {
+    let alpha = max(0, this.lifespan);
+    fill(255, random(180, 255), 0, alpha);
+    noStroke();
+    ellipse(this.pos.x, this.pos.y, this.size);
+  }
+
+  isDead() { return this.lifespan <= 0; }
+}
+
+let embers = [];
+
+function setup() {
+  createCanvas(W, H);
+  colorMode(RGB);
+}
+
+function draw() {
+  // Dark fading trail
+  background(0, 0, 0, 30);
+
+  let cx = W / 2;
+  let baseY = H - 60;
+
+  // Spawn particles — more toward center for natural flame shape
+  let count = floor(random(4, 9));
+  for (let i = 0; i < count; i++) {
+    let xOff = randomGaussian(0, 22);
+    particles.push(new Particle(cx + xOff, baseY));
+  }
+
+  // Spawn embers occasionally
+  if (random() < 0.18) {
+    embers.push(new Ember(cx + random(-15, 15), baseY - 40));
+  }
+
+  // Draw glow at base
+  drawGlow(cx, baseY);
+
+  // Update & draw particles (back to front)
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw();
+    if (particles[i].isDead()) particles.splice(i, 1);
+  }
+
+  // Embers on top
+  for (let i = embers.length - 1; i >= 0; i--) {
+    embers[i].update();
+    embers[i].draw();
+    if (embers[i].isDead()) embers.splice(i, 1);
+  }
+
+  // Log base
+  drawLog(cx, baseY);
+}
+
+function drawGlow(x, y) {
+  noStroke();
+  for (let r = 80; r > 0; r -= 10) {
+    let alpha = map(r, 0, 80, 60, 0);
+    fill(255, 80, 0, alpha);
+    ellipse(x, y, r * 2.5, r * 0.8);
+  }
+}
+
+function drawLog(x, y) {
+  // Two crossed logs
+  stroke(60, 35, 10);
+  strokeWeight(14);
+  strokeCap(ROUND);
+  line(x - 55, y + 18, x + 55, y - 5);
+  line(x - 55, y - 5, x + 55, y + 18);
+
+  // Dark grain lines
+  stroke(40, 20, 5);
+  strokeWeight(3);
+  line(x - 50, y + 16, x + 50, y - 3);
+  line(x - 50, y - 3, x + 50, y + 16);
+  noStroke();
+}
+</script>
+</body>
+</html>
